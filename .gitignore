@@ -1,0 +1,7 @@
+# Real secrets never get committed; templates do.
+.env
+.env.*
+!.env.example
+*.log
+node_modules/
+.DS_Store

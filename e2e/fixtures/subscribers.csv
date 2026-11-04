@@ -1,0 +1,6 @@
+email,name
+imp1@e2e.test,Import One
+imp2@e2e.test,Import Two
+IMP1@e2e.test,Dup
+bad-address,Bad
+=cmd@e2e.test,Formula

@@ -1,0 +1,24 @@
+; Background workers. The queue worker runs PDF exports and email campaigns; without it neither ever finishes.
+
+[program:pms-queue]
+command=php /var/www/pms/backend/artisan queue:work --sleep=1 --timeout=7200 --max-time=3600
+process_name=%(program_name)s_%(process_num)02d
+numprocs=2                       ; more workers = faster campaigns (rate limit is shared by all of them)
+user=www-data
+autostart=true
+autorestart=true
+stopasgroup=true
+killasgroup=true
+stopwaitsecs=7300                ; > --timeout so a running PDF export can finish on restart
+redirect_stderr=true
+stdout_logfile=/var/log/pms-queue.log
+
+[program:pms-web]
+command=npm start -- -H 127.0.0.1 -p 3000
+directory=/var/www/pms/frontend
+user=www-data
+autostart=true
+autorestart=true
+environment=NODE_ENV="production"
+redirect_stderr=true
+stdout_logfile=/var/log/pms-web.log

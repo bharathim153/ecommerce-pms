@@ -1,0 +1,43 @@
+# Rendered by entrypoint.sh (only ${PORT} is substituted).
+worker_processes auto;
+pid /run/nginx.pid;
+error_log /dev/stderr warn;
+events { worker_connections 1024; }
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+    access_log /dev/stdout;
+    sendfile on;
+    server_tokens off;
+    client_max_body_size 55M;
+    # the platform's proxy terminates TLS; real client IP comes from X-Forwarded-For (handled by Laravel TRUSTED_PROXIES)
+
+    map $http_x_forwarded_proto $http_x_forwarded_proto_is_https { default ""; https on; }
+
+    server {
+        listen ${PORT};
+        root /var/www/html/public;
+        index index.php;
+
+        location / { try_files $uri /index.php?$query_string; }
+
+        # Only index.php may execute.
+        location ~ ^/index\.php(/|$) {
+            include fastcgi_params;
+            fastcgi_pass 127.0.0.1:9000;
+            fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+            fastcgi_param HTTPS $http_x_forwarded_proto_is_https;
+            fastcgi_read_timeout 120s;
+        }
+        location ~ \.php$ { return 404; }
+
+        # Uploaded images (public/storage -> storage/app/public). Never executable.
+        location ^~ /storage/ {
+            expires 30d;
+            add_header X-Content-Type-Options "nosniff" always;
+            location ~* \.(php|phtml|phar|pl|py|sh|cgi)$ { return 404; }
+        }
+        location ~ /\.(?!well-known) { deny all; }
+    }
+}
