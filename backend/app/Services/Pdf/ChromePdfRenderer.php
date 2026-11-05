@@ -16,14 +16,26 @@ class ChromePdfRenderer
         $process = new Process([
             config('pdf.chrome_binary'),
             '--headless', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage',
+            '--disable-crash-reporter', '--disable-breakpad', '--no-zygote',
+            '--disable-software-rasterizer', '--disable-extensions', '--disable-background-networking',
+            '--no-first-run', '--no-default-browser-check',
             '--no-pdf-header-footer', '--hide-scrollbars',
             '--user-data-dir='.$profile,
             '--print-to-pdf='.$outPdf,
             'file://'.$htmlFile,
-        ], null, null, null, (float) config('pdf.chunk_timeout'));
+        ], null, [
+            // Chromium writes crash/config data under $HOME; the web user's home may be read-only.
+            'HOME' => $workDir,
+            'XDG_CONFIG_HOME' => $workDir.'/.config',
+            'XDG_CACHE_HOME' => $workDir.'/.cache',
+        ], null, (float) config('pdf.chunk_timeout'));
 
         try {
-            $process->run();
+            try {
+                $process->run();
+            } catch (\Symfony\Component\Process\Exception\ProcessSignaledException $e) {
+                throw new RuntimeException('Chrome crashed ('.$e->getMessage().'): '.substr(trim($process->getErrorOutput()), -1500));
+            }
         } finally {
             $this->rmdir($profile);
             @unlink($htmlFile);

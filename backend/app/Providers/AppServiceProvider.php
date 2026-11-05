@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -23,6 +24,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Mail::extend('brevo-api', fn (array $config) => new \App\Mail\BrevoApiTransport((string) ($config['key'] ?? '')));
+
         // Generated links (signed verification URLs, webhooks) must use https whenever the app is served over it.
         if (str_starts_with((string) config('app.url'), 'https://')) {
             URL::forceScheme('https');
